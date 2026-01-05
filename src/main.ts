@@ -5,7 +5,6 @@ import router from './router';
 import { useFollowStore } from './store/followStore'; 
 import { useThemeStore } from './stores/theme';
 import { check } from '@tauri-apps/plugin-updater';
-import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 
 const app = createApp(App);
 const pinia = createPinia();

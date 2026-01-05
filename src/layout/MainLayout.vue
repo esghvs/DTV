@@ -36,18 +36,6 @@
       </div>
     </div>
 
-    <!-- SVG Squircle Definition -->
-    <svg width="0" height="0" style="position: absolute; pointer-events: none;">
-      <defs>
-        <clipPath id="squircle-clip" clipPathUnits="objectBoundingBox">
-          <path d="M0.5 0 C0.9995 0 1 0.0005 1 0.5 C1 0.9995 0.9995 1 0.5 1 C0.0005 1 0 0.9995 0 0.5 C0 0.0005 0.0005 0 0.5 0 Z" />
-        </clipPath>
-        <mask id="squircle-mask" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox">
-          <rect width="1" height="1" fill="black" />
-          <path d="M0.5 0 C0.9995 0 1 0.0005 1 0.5 C1 0.9995 0.9995 1 0.5 1 C0.0005 1 0 0.9995 0 0.5 C0 0.0005 0.0005 0 0.5 0 Z" fill="white" />
-        </mask>
-      </defs>
-    </svg>
   </div>
 </template>
 
@@ -168,8 +156,6 @@ const handleFullscreenChange = (isFullscreen: boolean) => {
   display: flex;
   height: 100vh;
   background: transparent;
-  background-image: var(--page-mesh);
-  background-attachment: fixed;
   color: var(--primary-text);
   overflow: hidden;
   font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
@@ -241,9 +227,9 @@ const handleFullscreenChange = (isFullscreen: boolean) => {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: var(--ambient-bg-image), var(--page-mesh);
-  background-size: cover, cover;
-  background-position: center, center;
+  background-image: var(--ambient-bg-image);
+  background-size: cover;
+  background-position: center;
   filter: var(--ambient-bg-filter, blur(18px) saturate(1.1) brightness(0.9));
   opacity: var(--ambient-bg-opacity);
   z-index: -1;

@@ -53,15 +53,8 @@
 
       </div>
       
-      <div class="list-content" ref="listRef" @scroll="handleListScroll">
-        <motion.div
-          class="hover-highlight"
-          :initial="hoverHighlightInitial"
-          :animate="hoverHighlightMotion"
-          :transition="hoverHighlightTransition"
-          aria-hidden="true"
-          :style="{ borderRadius: '12px', minHeight: '38px' }"
-        />
+      <div class="list-content" ref="listRef" @scroll.passive="handleListScroll" @mouseleave="handleListMouseLeave">
+        <div class="hover-highlight" aria-hidden="true"></div>
         <div v-if="listItems.length === 0" class="empty-state">
           <div class="empty-image">
             <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart">
@@ -77,8 +70,6 @@
           tag="ul" 
           name="streamer-list"
           class="streamers-list"
-          ref="streamersListRef"
-          @mouseleave="handleListMouseLeave"
           :class="{ 'dragging-streamer': isDragging && draggedItemType === 'streamer' }"
         >
           <li
@@ -91,9 +82,8 @@
               'is-streamer': item.type === 'streamer'
             }"
             @mousedown="handleMouseDown($event, index)"
-            @mouseenter="handleItemMouseEnter(index)"
+            @mouseenter="handleItemMouseEnter($event, index)"
             @mouseleave="handleItemMouseLeave(index)"
-            :ref="(el) => setListItemRef(index, el)"
           >
             <!-- 文件夹项 -->
             <FolderItem
@@ -183,7 +173,7 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, onMounted, computed, watch, onUnmounted, nextTick, reactive } from 'vue';
+  import { ref, onMounted, computed, watch, onUnmounted, nextTick } from 'vue';
   import type { FollowedStreamer, LiveStatus } from '../../platforms/common/types';
   import { Platform } from '../../platforms/common/types';
   // import type { DouyuRoomInfo } from '../../platforms/douyu/types'; // No longer needed here
@@ -200,30 +190,12 @@
   import { useImageProxy } from './useProxy';
   import { useFollowStore, type FollowListItem } from '../../store/followStore';
   import { ListCollapse, UsersRound } from 'lucide-vue-next';
-  import { motion } from 'motion-v';
 
   const expandBtnRef = ref<HTMLButtonElement | null>(null)
   const overlayAlignTop = ref<number>(64)
   const overlayAlignLeft = ref<number>(240)
   
   const followStore = useFollowStore();
-  const streamersListRef = ref<HTMLElement | null>(null);
-  const hoveredIndex = ref<number | null>(null);
-  const hoverHighlight = reactive({ x: 0, y: 0, width: 0, height: 0, visible: false });
-  const hoverHighlightInitial = { x: 0, y: 0, width: 0, height: 32, opacity: 0 };
-  const hoverHighlightTransition = { type: 'spring', stiffness: 280, damping: 28, mass: 0.7 } as const;
-  const itemRefs = new Map<number, HTMLElement>();
-  const layoutMode = computed<'full' | 'icons'>(() => {
-    const width = streamersListRef.value?.clientWidth || 0;
-    return width <= 140 ? 'icons' : 'full';
-  });
-  const hoverHighlightMotion = computed(() => ({
-    x: hoverHighlight.x,
-    y: hoverHighlight.y,
-    width: hoverHighlight.width,
-    height: hoverHighlight.height,
-    opacity: hoverHighlight.visible ? 1 : 0,
-  }));
   
   // Updated DouyinRoomInfo to match the Rust struct DouyinFollowListRoomInfo
   // interface DouyinRoomInfo { // This will be the type for `data` from invoke
@@ -257,6 +229,13 @@
   });
 
   const listRef = ref<HTMLElement | null>(null);
+  let hoveredItem: HTMLElement | null = null;
+  let hoverRaf: number | null = null;
+  let hoverAnimating = false;
+  let hoverCurrentY = 0;
+  let hoverCurrentH = 0;
+  let hoverTargetY = 0;
+  let hoverTargetH = 0;
   const isDragging = ref(false);
   const draggedIndex = ref(-1);
   const startY = ref(0);
@@ -478,91 +457,89 @@
     }
   });
 
-  watch(listItems, () => {
-    itemRefs.clear();
-    hoveredIndex.value = null;
-    hoverHighlight.visible = false;
-    nextTick(() => recomputeHoverHighlight());
-  });
-
   // 自定义文件夹
   const createNewFolder = () => {
     const name = `新文件夹 ${followStore.folders.length + 1}`;
     followStore.createFolder(name);
   };
 
-  const recomputeHoverHighlight = () => {
-    const index = hoveredIndex.value;
-    if (index === null) {
-      hoverHighlight.visible = false;
-      return;
-    }
+  
+  // 文件夹展开/折叠
+  const animateHoverHighlight = () => {
     const listEl = listRef.value;
-    const itemEl = itemRefs.get(index);
-    if (!listEl || !itemEl) {
-      hoverHighlight.visible = false;
+    if (!listEl) {
+      hoverAnimating = false;
       return;
     }
-    const listRect = listEl.getBoundingClientRect();
-    const itemRect = itemEl.getBoundingClientRect();
-    const scrollLeft = listEl.scrollLeft;
-    const scrollTop = listEl.scrollTop;
-    const isIcons = layoutMode.value === 'icons';
-    hoverHighlight.x = isIcons ? 0 : (itemRect.left - listRect.left + scrollLeft);
-    hoverHighlight.y = itemRect.top - listRect.top + scrollTop;
-    hoverHighlight.width = isIcons ? listRect.width : itemRect.width;
-    hoverHighlight.height = itemRect.height;
-    hoverHighlight.visible = true;
+    const dy = hoverTargetY - hoverCurrentY;
+    const dh = hoverTargetH - hoverCurrentH;
+    hoverCurrentY += dy * 0.18;
+    hoverCurrentH += dh * 0.18;
+    if (Math.abs(dy) < 0.4) hoverCurrentY = hoverTargetY;
+    if (Math.abs(dh) < 0.4) hoverCurrentH = hoverTargetH;
+    listEl.style.setProperty('--hover-y', `${hoverCurrentY}px`);
+    listEl.style.setProperty('--hover-h', `${hoverCurrentH}px`);
+    if (hoveredItem || Math.abs(dy) >= 0.4 || Math.abs(dh) >= 0.4) {
+      hoverRaf = window.requestAnimationFrame(animateHoverHighlight);
+      return;
+    }
+    hoverAnimating = false;
+    hoverRaf = null;
   };
 
-  const setListItemRef = (index: number, el: any) => {
-    if (!el) {
-      itemRefs.delete(index);
-      return;
-    }
-    const element = el?.$el ?? el;
-    if (element instanceof HTMLElement) {
-      itemRefs.set(index, element);
-      if (hoveredIndex.value === index) {
-        nextTick(recomputeHoverHighlight);
+  const applyHoverHighlight = () => {
+    const listEl = listRef.value;
+    if (!listEl) return;
+    if (!hoveredItem) {
+      listEl.style.setProperty('--hover-opacity', '0');
+      hoverTargetY = hoverCurrentY;
+      hoverTargetH = hoverCurrentH;
+      if (!hoverAnimating) {
+        hoverAnimating = true;
+        hoverRaf = window.requestAnimationFrame(animateHoverHighlight);
       }
+      return;
+    }
+    const y = hoveredItem.offsetTop - listEl.scrollTop;
+    const h = hoveredItem.offsetHeight;
+    listEl.style.setProperty('--hover-opacity', '1');
+    hoverTargetY = Math.max(0, y);
+    hoverTargetH = Math.max(0, h);
+    if (!hoverAnimating) {
+      hoverAnimating = true;
+      hoverRaf = window.requestAnimationFrame(animateHoverHighlight);
     }
   };
 
-  const handleItemMouseEnter = (index: number) => {
+  const scheduleHoverHighlight = () => {
+    applyHoverHighlight();
+  };
+
+  const handleItemMouseEnter = (event: MouseEvent, index: number) => {
     const item = listItems.value[index];
     if (!item || item.type !== 'streamer') {
-      hoveredIndex.value = null;
-      hoverHighlight.visible = false;
+      hoveredItem = null;
+      scheduleHoverHighlight();
       return;
     }
-    hoveredIndex.value = index;
-    nextTick(recomputeHoverHighlight);
+    hoveredItem = event.currentTarget as HTMLElement;
+    scheduleHoverHighlight();
   };
 
-  const handleItemMouseLeave = (index: number) => {
-    if (hoveredIndex.value === index) {
-      hoveredIndex.value = null;
-      hoverHighlight.visible = false;
-    }
+  const handleItemMouseLeave = (_index: number) => {
+    hoveredItem = null;
+    scheduleHoverHighlight();
   };
 
   const handleListMouseLeave = () => {
-    hoveredIndex.value = null;
-    hoverHighlight.visible = false;
-  };
-
-  const handleWindowResize = () => {
-    nextTick(() => recomputeHoverHighlight());
+    hoveredItem = null;
+    scheduleHoverHighlight();
   };
 
   const handleListScroll = () => {
-    if (hoverHighlight.visible) {
-      recomputeHoverHighlight();
-    }
+    if (hoveredItem) scheduleHoverHighlight();
   };
-  
-  // 文件夹展开/折叠
+
   const handleToggleFolderExpand = (folderId: string) => {
     followStore.toggleFolderExpanded(folderId);
   };
@@ -1214,9 +1191,7 @@
     if (!followStore.listOrder.length && props.followedAnchors.length > 0) {
       followStore.initializeListOrder();
     }
-    if (typeof window !== 'undefined') {
-      window.addEventListener('resize', handleWindowResize);
-    }
+    
     
     // 在初次渲染前，若包含 B 站主播则先启动静态代理，避免头像首次以原始地址加载导致 403
     const hasBili = props.followedAnchors.some(s => s.platform === Platform.BILIBILI);
@@ -1229,9 +1204,11 @@
   
   onUnmounted(() => {
     clearAnimationTimeout();
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('resize', handleWindowResize);
+    if (hoverRaf !== null && typeof window !== 'undefined') {
+      window.cancelAnimationFrame(hoverRaf);
+      hoverRaf = null;
     }
+    
   });
   </script>
   

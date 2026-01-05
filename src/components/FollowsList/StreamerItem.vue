@@ -44,7 +44,7 @@
   justify-content: flex-start;
   width: 100%;
   user-select: none;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease;
   border-radius: 0;
   position: relative;
   overflow: hidden;

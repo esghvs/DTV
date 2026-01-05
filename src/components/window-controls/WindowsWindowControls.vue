@@ -8,8 +8,8 @@
       aria-label="最小化窗口"
       data-tauri-drag-region="none"
     >
-      <svg class="win-icon" viewBox="0 0 10 10" aria-hidden="true">
-        <path d="M1 5h8" />
+      <svg class="win-icon" viewBox="0 0 12 12" aria-hidden="true">
+        <path d="M2 6h8" />
       </svg>
     </button>
     <button
@@ -20,12 +20,12 @@
       :aria-label="isMaximized ? '还原窗口' : '最大化窗口'"
       data-tauri-drag-region="none"
     >
-      <svg v-if="!isMaximized" class="win-icon" viewBox="0 0 10 10" aria-hidden="true">
-        <rect x="1.5" y="1.5" width="7" height="7" />
+      <svg v-if="!isMaximized" class="win-icon" viewBox="0 0 12 12" aria-hidden="true">
+        <rect x="2" y="2" width="8" height="8" />
       </svg>
-      <svg v-else class="win-icon is-restore" viewBox="0 0 10 10" aria-hidden="true">
-        <path d="M3 2h5v5h-1.5" />
-        <rect x="2" y="3" width="5" height="5" />
+      <svg v-else class="win-icon is-restore" viewBox="0 0 12 12" aria-hidden="true">
+        <path d="M4 2h6v6h-2" />
+        <rect x="2" y="4" width="6" height="6" />
       </svg>
     </button>
     <button
@@ -36,8 +36,8 @@
       aria-label="关闭窗口"
       data-tauri-drag-region="none"
     >
-      <svg class="win-icon" viewBox="0 0 10 10" aria-hidden="true">
-        <path d="M2 2l6 6M8 2L2 8" />
+      <svg class="win-icon" viewBox="0 0 12 12" aria-hidden="true">
+        <path d="M3 3l6 6M9 3L3 9" />
       </svg>
     </button>
   </div>
@@ -131,21 +131,23 @@ onBeforeUnmount(async () => {
   background-color: transparent;
   border-radius: 0;
   overflow: hidden;
-  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+  height: 32px;
+  width: 132px;
+  box-shadow: none;
   -webkit-app-region: no-drag;
 }
 
 .win-control {
-  width: 46px;
+  width: 44px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.88);
   cursor: pointer;
-  transition: background-color 0.16s ease, color 0.16s ease;
+  transition: background-color 0.12s ease, color 0.12s ease;
   -webkit-app-region: no-drag;
 }
 
@@ -155,11 +157,11 @@ onBeforeUnmount(async () => {
 }
 
 .win-control:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .win-control:active {
-  background-color: rgba(255, 255, 255, 0.16);
+  background-color: rgba(255, 255, 255, 0.18);
 }
 
 .win-control--close {
@@ -177,21 +179,19 @@ onBeforeUnmount(async () => {
 }
 
 .win-icon {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.2;
+  stroke-width: 1.1;
   stroke-linecap: square;
   stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: geometricPrecision;
 }
 
 .win-icon.is-restore path:first-of-type {
   fill: none;
-}
-
-:global(:root[data-theme="light"] .win-controls) {
-  box-shadow: none;
 }
 
 :global(:root[data-theme="light"] .win-controls .win-control) {

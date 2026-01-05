@@ -107,10 +107,9 @@ body {
   line-height: 1.6;
   font-weight: 450;
   color: var(--primary-text);
-  /* Use transparent root so system vibrancy can show through; keep page mesh */
+  /* Use transparent root so system vibrancy can show through */
   background-color: transparent;
-  background-image: var(--page-mesh);
-  background-attachment: fixed;
+  background-image: none;
   min-height: 100vh;
 
   font-synthesis: none;

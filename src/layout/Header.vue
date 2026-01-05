@@ -749,7 +749,7 @@ const tryEnterRoom = (roomId: string) => {
 
 .header-actions--windows {
   position: relative;
-  padding-right: 0;
+  padding-right: 120px;
   height: 100%;
   align-self: stretch;
 }
@@ -757,7 +757,7 @@ const tryEnterRoom = (roomId: string) => {
 .header-actions--windows :deep(.win-controls) {
   position: absolute;
   top: 0;
-  right: -24px;
+  right: -12px;
 }
 
 .header-actions--windows .search-box {

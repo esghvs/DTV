@@ -10,29 +10,20 @@
        <p>请选择一个分类开始浏览</p>
     </div>
 
-    <RecycleScroller
+    <div
       v-else
       ref="scrollComponentRef"
       class="live-grid-scroll-area"
-      :items="roomRows"
-      :item-size="rowHeight"
-      key-field="rowKey"
-      :buffer="600"
-      :prerender="4"
-      @scroll="handleScrollerScroll"
+      @scroll.passive="handleScrollerScroll"
     >
-      <template #default="{ item: row }">
-        <div class="live-grid-common" :style="{ '--items-per-row': itemsPerRow }">
-          <motion.div 
-            v-for="(room, index) in row.items" 
-            :key="room.room_id + '-' + index" 
-            class="card-shadow-wrapper"
-            :class="{ 'hover-paused': isScrolling }"
-            @click="goToPlayer(room.room_id)"
-            :initial="{ opacity: 1, scale: 1 }"
-            :animate="{ opacity: 1, scale: 1 }"
-            :whileHover="isScrolling ? undefined : { scale: 1.02, transition: { duration: 0.2 } }"
-          >
+      <div class="live-grid-common" :style="{ '--items-per-row': itemsPerRow }">
+        <div 
+          v-for="room in rooms" 
+          :key="room.room_id" 
+          class="card-shadow-wrapper"
+          :class="{ 'hover-paused': isScrolling }"
+          @click="goToPlayer(room.room_id)"
+        >
             <div class="streamer-card-common">
               <div class="card-preview-common">
                 <div class="image-wrapper-frame">
@@ -64,10 +55,9 @@
                 </div>
               </div>
             </div>
-          </motion.div>
         </div>
-      </template>
-    </RecycleScroller>
+      </div>
+    </div>
     <div v-if="isLoadingMore" class="loading-more-indicator">
       <LoadingDots />
     </div>
@@ -77,8 +67,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, nextTick, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { motion } from 'motion-v';
-import { RecycleScroller } from 'vue-virtual-scroller';
 import { useResizeObserver } from '@vueuse/core';
 import type { CategorySelectedEvent } from '../../platforms/common/categoryTypes'
 import { useHuyaLiveRooms } from './composables/useHuyaLiveRooms.ts'
@@ -191,26 +179,6 @@ const itemsPerRow = computed(() => {
   return Math.max(1, Math.floor((width + gridGap) / (minCardWidth + gridGap)));
 });
 
-const roomRows = computed(() => {
-  const rows: { rowKey: string; items: typeof rooms.value }[] = [];
-  const perRow = itemsPerRow.value;
-  for (let i = 0; i < rooms.value.length; i += perRow) {
-    rows.push({ rowKey: `row-${i}`, items: rooms.value.slice(i, i + perRow) });
-  }
-  return rows;
-});
-
-const rowHeight = computed(() => {
-  const perRow = itemsPerRow.value;
-  const width = containerWidth.value || (minCardWidth * perRow);
-  const cardWidth = (width - gridGap * (perRow - 1)) / perRow;
-  const contentWidth = Math.max(120, cardWidth - 16);
-  const previewHeight = contentWidth * 0.625;
-  const footerHeight = 48;
-  const padding = 16;
-  const rowGap = gridGap;
-  return Math.ceil(previewHeight + footerHeight + padding + rowGap);
-});
 
 const isScrolling = ref(false);
 let scrollStopTimer: number | null = null;
@@ -323,7 +291,7 @@ const goToPlayer = (roomId: string) => {
   flex-grow: 1;
   overflow-y: auto;
   padding: 6px;
-  --squircle-radius: 1%;
+  --card-radius: 12px;
 }
 
 .live-grid-scroll-area::-webkit-scrollbar {
@@ -344,12 +312,12 @@ const goToPlayer = (roomId: string) => {
 
 .card-shadow-wrapper {
   position: relative;
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s ease;
+  will-change: transform;
 }
 
 .card-shadow-wrapper:hover {
-  transform: translateY(-6px);
-  filter: none;
+  transform: translateY(-4px);
 }
 
 .card-shadow-wrapper.hover-paused,
@@ -359,17 +327,13 @@ const goToPlayer = (roomId: string) => {
 
 .streamer-card-common {
   background: var(--hover-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  clip-path: url(#squircle-clip);
-  border-radius: var(--squircle-radius);
-  overflow: hidden;
+  border-radius: var(--card-radius);
   display: flex;
   flex-direction: column;
   cursor: pointer;
   border: 1px solid var(--glass-border);
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  padding: 8px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  padding: 0;
 }
 
 .streamer-card-common:hover {
@@ -385,33 +349,20 @@ const goToPlayer = (roomId: string) => {
   width: 100%;
   aspect-ratio: 16 / 10;
   position: relative;
+  border-radius: var(--card-radius) var(--card-radius) 0 0;
   overflow: hidden;
 }
 
 .image-wrapper-frame {
   width: 100%;
   height: 100%;
-  border-radius: var(--squircle-radius);
-  overflow: hidden;
   position: relative;
-  clip-path: url(#squircle-clip);
-}
-
-:global(:root[data-platform="windows"]) .image-wrapper-frame {
-  clip-path: none;
-  mask: url(#squircle-mask);
-  -webkit-mask: url(#squircle-mask);
 }
 
 .preview-image-common {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.streamer-card-common:hover .preview-image-common {
-  transform: scale(1.1);
 }
 
 .card-overlay-gradient {
@@ -441,7 +392,7 @@ const goToPlayer = (roomId: string) => {
 
 .card-info-footer-common {
   display: flex;
-  padding: 6px 8px 2px 8px;
+  padding: 8px 10px 10px;
   gap: 8px;
   align-items: center;
 }
